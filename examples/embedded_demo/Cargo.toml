@@ -6,4 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-wasmedge_sdk = { path = "../../wasmedge_sdk", features = ["embedded"] }
+wasmedge_plugin_sdk = { path = "../../wasmedge_plugin_sdk", features = [
+    "embedded",
+] }

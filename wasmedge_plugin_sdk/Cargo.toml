@@ -1,5 +1,5 @@
 [package]
-name = "wasmedge_sdk"
+name = "wasmedge_plugin_sdk"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 thiserror = "1"
-wasmedge_sys_ffi = { path = "../wasmedge_sys_ffi" }
+wasmedge_sys_ffi = { version = "0.11.2", path = "../wasmedge_sys_ffi" }
 
 [features]
 default = ["plugin"]

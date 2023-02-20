@@ -1,6 +1,6 @@
 use std::ffi::CString;
 
-use wasmedge_sdk::{
+use wasmedge_plugin_sdk::{
     error::CoreError,
     memory::Memory,
     module::{SyncInstanceRef, SyncModule},

@@ -1,4 +1,4 @@
-use wasmedge_sdk::{
+use wasmedge_plugin_sdk::{
     ast_module::Loader,
     config::Config,
     executor::Executor,

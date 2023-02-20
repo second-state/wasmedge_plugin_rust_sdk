@@ -10,7 +10,7 @@ thiserror = "1"
 wasmedge_sys_ffi = { path = "../wasmedge_sys_ffi" }
 
 [features]
-default = []
+default = ["plugin"]
 wasi = []
 embedded = ["wasi"]
 plugin = []

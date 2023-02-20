@@ -1,0 +1,2 @@
+[workspace]
+members = ["wasmedge_sys_ffi", "wasmedge_sdk", "examples/*_demo", "wasm/*"]

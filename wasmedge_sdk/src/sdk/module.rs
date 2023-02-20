@@ -175,6 +175,11 @@ impl<T: Send + Sized> DerefMut for SyncModule<T> {
 }
 
 impl<T: Send + Sized> SyncModule<T> {
+    pub fn create<S: AsRef<str>>(name: S, data: T) -> Result<Self, InstanceError> {
+        let inner = ImportModule::create(name, data)?;
+        Ok(Self { inner })
+    }
+
     pub unsafe fn add_custom_func(
         &mut self,
         name: &str,

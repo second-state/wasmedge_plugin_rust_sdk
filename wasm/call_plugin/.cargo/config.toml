@@ -1,0 +1,11 @@
+[build]
+target = "wasm32-wasi"
+rustflags = [
+    "-C",
+    "target-feature=+bulk-memory",
+    "-C",
+    "link-args=--export malloc",
+]
+
+[target.wasm32-wasi]
+runner = "../../WasmEdge/build/tools/wasmedge/wasmedge"

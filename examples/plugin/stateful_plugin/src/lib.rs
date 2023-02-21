@@ -19,9 +19,9 @@ pub fn create_module() -> SyncModule<(i32, i32)> {
         if let WasmVal::I32(v) = arg {
             let v = *v;
             data.0 += v;
-            println!("add x with {}", v);
+            println!("[plugin] add x with {}", v);
         }
-        println!("module2 data  = {:?}", data);
+        println!("[plugin] module data  = {:?}", data);
         Ok(vec![WasmVal::I32(data.0)])
     }
 
@@ -35,13 +35,13 @@ pub fn create_module() -> SyncModule<(i32, i32)> {
         if let WasmVal::I32(v) = arg {
             let v = *v;
             data.1 += v;
-            println!("add y with {}", v);
+            println!("[plugin] add y with {}", v);
         }
-        println!("module2 data  = {:?}", data);
+        println!("[plugin] module data  = {:?}", data);
         Ok(vec![WasmVal::I32(data.1)])
     }
 
-    let mut module = SyncModule::create("demo_module2", (0, 0)).unwrap();
+    let mut module = SyncModule::create("stateful_module", (0, 0)).unwrap();
 
     module
         .add_func("add_x", (vec![ValType::I32], vec![ValType::I32]), add_x)
@@ -55,11 +55,11 @@ pub fn create_module() -> SyncModule<(i32, i32)> {
 #[export_name = "WasmEdge_Plugin_GetDescriptor"]
 pub extern "C" fn plugin_hook() -> PluginDescriptorRef {
     let mut builder = PluginBuilder::create(
-        CString::new("demo_plugin2").unwrap(),
+        CString::new("stateful_plugin").unwrap(),
         CString::new("a demo of plugin").unwrap(),
     );
     builder.add_module(
-        CString::new("demo_module2").unwrap(),
+        CString::new("stateful_module").unwrap(),
         CString::new("a demo of module").unwrap(),
         create_module,
     );

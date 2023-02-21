@@ -12,36 +12,36 @@ This demo shows how to manage application state in the plugin, and have the stat
 
 ### Plugin
 
-The plugin source code is [here](examples/plugin_demo). You can build it with
+The plugin source code is [here](examples/plugin/stateful_plugin/). You can build it with
 
 ```bash
-cd examples/plugin/demo
+cd examples/plugin/stateful_plugin
 cargo build --release
 ```
 
-The build result is a `libplugin_demo.so` file that you can copy into WasmEdge's `lib` directory to install as a plugin.
+The build result is a `libstateful_plugin.so` file that you can copy into WasmEdge's `lib` directory to install as a plugin.
 
 ```bash
-cp ../../../target/release/libplugin_demo.so ~/.wasmedge/lib
+cp ../../../target/release/libstateful_plugin.so ~/.wasmedge/lib
 ... or ...
-cp ../../../target/release/libplugin_demo.so /usr/local/lib
+cp ../../../target/release/libstateful_plugin.so /usr/local/lib
 ```
 
 The plugin maintains an internal state in a `(x,y)` tuple, and exposes two host functions, `add_x()` and `add_y()` to manipulate the tuple value. The tuple is initialized to `(0,0)` in the plugin source code.
 
 ### Wasm program
 
-The Wasm program source code is [here](wasm/call_plugin). It compiles into a Wasm program that calls the host functions in the plugin. Build it with
+The Wasm program source code is [here](examples/wasm/call_stateful_plugin/). It compiles into a Wasm program that calls the host functions in the plugin. Build it with
 
 ```bash
-cd examples/wasm/call_plugin
+cd examples/wasm/call_stateful_plugin
 cargo build --release
 ```
 
 Run it with the following command. It calls the `add_x()` and `add_y()` host functions in the plugin to manipulate the tuple data in the plugin.
 
 ```bash
-wasmedge ../../../target/wasm32-wasi/release/call_plugin.wasm
+wasmedge ../../../target/wasm32-wasi/release/call_stateful_plugin.wasm
 ```
 
 ## Example 3: Callback -- Plugin calls Wasm

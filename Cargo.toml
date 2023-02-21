@@ -2,8 +2,6 @@
 members = [
     "wasmedge_sys_ffi",
     "wasmedge_plugin_sdk",
-    "examples/*_demo",
     "examples/wasm/*",
     "examples/plugin/*",
-    "wasm/*",
 ]

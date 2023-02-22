@@ -8,6 +8,13 @@ use wasmedge_plugin_sdk::{
     types::{ValType, WasmVal},
 };
 
+#[derive(Debug)]
+pub enum PluginError {
+    ParamError,
+    MemoryError,
+    UTF8Error,
+}
+
 pub fn create_module() -> SyncModule<()> {
     fn to_uppercase<'a>(
         _inst_ref: &'a mut SyncInstanceRef,
@@ -15,24 +22,33 @@ pub fn create_module() -> SyncModule<()> {
         _data: &'a mut (),
         args: Vec<WasmVal>,
     ) -> Result<Vec<WasmVal>, CoreError> {
-        if let (WasmVal::I32(data_ptr), WasmVal::I32(data_len)) = (args[0].clone(), args[1].clone())
-        {
-            if let Some(mut bytes) =
-                main_memory.data_pointer_mut(data_ptr as usize, data_len as usize)
-            {
-                let uppercase = if let Ok(s) = std::str::from_utf8_mut(bytes) {
-                    s.to_uppercase()
-                } else {
-                    return Ok(vec![WasmVal::I32(-3)]);
-                };
+        fn to_uppercase_(
+            main_memory: &mut Memory,
+            data_ptr: &WasmVal,
+            data_len: &WasmVal,
+        ) -> Result<(), PluginError> {
+            if let (WasmVal::I32(data_ptr), WasmVal::I32(data_len)) = (data_ptr, data_len) {
+                let mut bytes = main_memory
+                    .data_pointer_mut(*data_ptr as usize, *data_len as usize)
+                    .ok_or(PluginError::MemoryError)?;
+
+                let uppercase = std::str::from_utf8_mut(bytes)
+                    .map_err(|_| PluginError::UTF8Error)?
+                    .to_uppercase();
 
                 let _ = bytes.write_all(uppercase.as_bytes());
-                Ok(vec![WasmVal::I32(0)])
+
+                Ok(())
             } else {
-                Ok(vec![WasmVal::I32(-2)])
+                Err(PluginError::ParamError)
             }
-        } else {
-            Ok(vec![WasmVal::I32(-1)])
+        }
+
+        match to_uppercase_(main_memory, &args[0], &args[1]) {
+            Ok(_) => Ok(vec![WasmVal::I32(0)]),
+            Err(PluginError::ParamError) => Ok(vec![WasmVal::I32(-1)]),
+            Err(PluginError::MemoryError) => Ok(vec![WasmVal::I32(-2)]),
+            Err(PluginError::UTF8Error) => Ok(vec![WasmVal::I32(-3)]),
         }
     }
 

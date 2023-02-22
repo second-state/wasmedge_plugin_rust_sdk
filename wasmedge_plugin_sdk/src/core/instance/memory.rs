@@ -1,3 +1,5 @@
+use std::ops::{Add, Sub};
+
 use crate::error::CoreError;
 use crate::utils::check;
 use wasmedge_sys_ffi as ffi;
@@ -88,8 +90,7 @@ impl Memory {
         }
     }
 
-    #[allow(unused)]
-    pub(crate) unsafe fn data_pointer_raw(&self, offset: usize, len: usize) -> Option<*const u8> {
+    pub unsafe fn data_pointer_raw(&self, offset: usize, len: usize) -> Option<*const u8> {
         let ptr = unsafe {
             ffi::WasmEdge_MemoryInstanceGetPointerConst(self.inner.0, offset as u32, len as u32)
         };
@@ -100,12 +101,7 @@ impl Memory {
         }
     }
 
-    #[allow(unused)]
-    pub(crate) unsafe fn data_pointer_mut_raw(
-        &mut self,
-        offset: usize,
-        len: usize,
-    ) -> Option<*mut u8> {
+    pub unsafe fn data_pointer_mut_raw(&mut self, offset: usize, len: usize) -> Option<*mut u8> {
         let ptr = unsafe {
             ffi::WasmEdge_MemoryInstanceGetPointer(self.inner.0, offset as u32, len as u32)
         };
@@ -127,6 +123,80 @@ impl Memory {
 
     pub fn delete(self) {
         unsafe { ffi::WasmEdge_MemoryInstanceDelete(self.inner.0) };
+    }
+
+    pub fn get_data<'a, T: Sized>(&'a self, offset: WasmPtr<T>) -> Option<&'a T> {
+        unsafe {
+            let r = std::mem::size_of::<T>();
+            let ptr = self.data_pointer_raw(offset.0, r)?;
+            Some(ptr.cast::<T>().as_ref().unwrap())
+        }
+    }
+
+    pub fn get_slice<'a, T: Sized>(&'a self, offset: WasmPtr<T>, len: usize) -> Option<&'a [T]> {
+        unsafe {
+            let r = std::mem::size_of::<T>() * len;
+            let ptr = self.data_pointer_raw(offset.0, r)? as *const T;
+            Some(std::slice::from_raw_parts(ptr, len))
+        }
+    }
+
+    pub fn mut_data<'a, T: Sized>(&'a mut self, offset: WasmPtr<T>) -> Option<&'a mut T> {
+        unsafe {
+            let r = std::mem::size_of::<T>();
+            let ptr = self.data_pointer_mut_raw(offset.0, r)?;
+            Some(ptr.cast::<T>().as_mut().unwrap())
+        }
+    }
+
+    pub fn mut_slice<'a, T: Sized>(
+        &'a mut self,
+        offset: WasmPtr<T>,
+        len: usize,
+    ) -> Option<&'a mut [T]> {
+        unsafe {
+            let r = std::mem::size_of::<T>() * len;
+            let ptr = self.data_pointer_raw(offset.0, r)? as *mut T;
+            Some(std::slice::from_raw_parts_mut(ptr, len))
+        }
+    }
+
+    pub fn write_data<'a, T: Sized>(&'a mut self, offset: WasmPtr<T>, data: T) -> Option<()> {
+        let p = self.mut_data(offset)?;
+        *p = data;
+        Some(())
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct WasmPtr<T: Sized>(pub usize, std::marker::PhantomData<T>);
+impl<T: Sized> WasmPtr<T> {
+    pub fn is_null(&self) -> bool {
+        self.0 == 0
+    }
+}
+impl<T: Sized> From<usize> for WasmPtr<T> {
+    fn from(i: usize) -> Self {
+        WasmPtr(i, Default::default())
+    }
+}
+impl<T: Sized> Into<usize> for WasmPtr<T> {
+    fn into(self) -> usize {
+        self.0
+    }
+}
+impl<T: Sized> Add<usize> for WasmPtr<T> {
+    type Output = Self;
+    fn add(mut self, rhs: usize) -> Self::Output {
+        self.0 += rhs * std::mem::size_of::<T>();
+        self
+    }
+}
+impl<T: Sized> Sub<usize> for WasmPtr<T> {
+    type Output = Self;
+    fn sub(mut self, rhs: usize) -> Self::Output {
+        self.0 -= rhs * std::mem::size_of::<T>();
+        self
     }
 }
 

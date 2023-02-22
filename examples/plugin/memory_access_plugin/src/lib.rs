@@ -52,6 +52,23 @@ pub fn create_module() -> SyncModule<()> {
         }
     }
 
+    fn get_data<'a>(
+        inst_ref: &'a mut SyncInstanceRef,
+        main_memory: &'a mut Memory,
+        _data: &'a mut (),
+        _args: Vec<WasmVal>,
+    ) -> Result<Vec<WasmVal>, CoreError> {
+        let data = "a string return from plugin\0";
+        let result = inst_ref.call("malloc", vec![WasmVal::I32(data.len() as i32)])?;
+        if let Some(WasmVal::I32(data_ptr)) = result.first() {
+            let data_ptr = *data_ptr;
+            main_memory.write_bytes(data, data_ptr as u32)?;
+            Ok(vec![WasmVal::I32(data_ptr)])
+        } else {
+            Ok(vec![WasmVal::I32(-1)])
+        }
+    }
+
     let mut module = SyncModule::create("memory_access_module", ()).unwrap();
 
     module
@@ -60,6 +77,10 @@ pub fn create_module() -> SyncModule<()> {
             (vec![ValType::I32, ValType::I32], vec![ValType::I32]),
             to_uppercase,
         )
+        .unwrap();
+
+    module
+        .add_func("get_data", (vec![], vec![ValType::I32]), get_data)
         .unwrap();
 
     module

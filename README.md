@@ -44,11 +44,7 @@ Run it with the following command. It calls the `add_x()` and `add_y()` host fun
 wasmedge ../../../target/wasm32-wasi/release/call_stateful_plugin.wasm
 ```
 
-## Example 3: Callback -- Plugin calls Wasm
-
-This demo shows how a host function in the plugin calls a Wasm program running inside WasmEdge.
-
-## Example 4: Memory access -- Plugin calls Wasm
+## Example 3: Memory access -- Plugin calls Wasm
 
 This demo shows how a host function in the plugin accesses memory in the Wasm program. It allows host functions to exchange dynamic data (e.g., strings and arrays) with the Wasm program.
 

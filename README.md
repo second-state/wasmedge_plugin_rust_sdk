@@ -23,7 +23,7 @@ cp ../../../target/release/libhello_plugin.so /usr/local/lib/wasmedge/
 cp ../../../target/release/libhello_plugin.so ~/.wasmedge/plugin
 ```
 
-The plugin provides a native host function 'hello'()` that prints a line of text to the system console.
+The plugin provides a native host function `hello()` that prints a line of text to the system console.
 
 ### Wasm program
 

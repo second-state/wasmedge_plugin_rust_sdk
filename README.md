@@ -83,3 +83,39 @@ wasmedge ../../../target/wasm32-wasi/release/call_stateful_plugin.wasm
 
 This demo shows how a host function in the plugin accesses memory in the Wasm program. It allows host functions to exchange dynamic data (e.g., strings and arrays) with the Wasm program.
 
+### Plugin
+
+The plugin source code is [here](examples/plugin/memory_access_plugin/). You can build it with
+
+```bash
+cd examples/plugin/memory_access_plugin
+cargo build --release
+```
+
+The build result is a `libmemory_access_plugin.so` file that you can copy into WasmEdge's plugin directory.
+
+```bash
+cp ../../../target/release/libmemory_access_plugin.so /usr/local/lib/wasmedge/
+... or ...
+cp ../../../target/release/libmemory_access_plugin.so ~/.wasmedge/plugin
+```
+
+The plugin provides two native host functions 
+
+* `get_data()` allows the host function to access and modify memory managed by the Wasm runtime.
+* `to_uppercase()` takes the memory space for a string in the Wasm runtime, and turns the in-memory string into upper case.
+
+### Wasm program
+
+The Wasm program source code is [here](examples/wasm/call_memory_access/). It compiles into a Wasm program that calls the native host functions `get_data()` and `to_uppercase()` in the plugin. Build it with
+
+```bash
+cd examples/wasm/hello_world
+cargo build --release
+```
+
+Run it with the following command.
+
+```bash
+wasmedge ../../../target/wasm32-wasi/release/all_memory_access.wasm
+```

@@ -22,9 +22,9 @@ cargo build --release
 The build result is a `libstateful_plugin.so` file that you can copy into WasmEdge's `lib` directory to install as a plugin.
 
 ```bash
-cp ../../../target/release/libstateful_plugin.so ~/.wasmedge/lib
+cp ../../../target/release/libstateful_plugin.so /usr/local/lib/wasmedge/
 ... or ...
-cp ../../../target/release/libstateful_plugin.so /usr/local/lib
+cp ../../../target/release/libstateful_plugin.so ~/.wasmedge/lib
 ```
 
 The plugin maintains an internal state in a `(x,y)` tuple, and exposes two host functions, `add_x()` and `add_y()` to manipulate the tuple value. The tuple is initialized to `(0,0)` in the plugin source code.

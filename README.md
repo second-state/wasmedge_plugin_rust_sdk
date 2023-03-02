@@ -110,12 +110,12 @@ The plugin provides two native host functions
 The Wasm program source code is [here](examples/wasm/call_memory_access/). It compiles into a Wasm program that calls the native host functions `get_data()` and `to_uppercase()` in the plugin. Build it with
 
 ```bash
-cd examples/wasm/hello_world
+cd examples/wasm/call_memory_access
 cargo build --release
 ```
 
 Run it with the following command.
 
 ```bash
-wasmedge ../../../target/wasm32-wasi/release/all_memory_access.wasm
+wasmedge ../../../target/wasm32-wasi/release/call_memory_access.wasm
 ```

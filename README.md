@@ -6,6 +6,41 @@ WasmEdge plugins are packaged host functions that allow Wasm programs running in
 
 This demo shows how to call a host function registered in the plugin from a Wasm program running inside WasmEdge.
 
+### Plugin
+
+The plugin source code is [here](examples/plugin/hello_plugin/). You can build it with
+
+```bash
+cd examples/plugin/hello_plugin
+cargo build --release
+```
+
+The build result is a `libhello_plugin.so` file that you can copy into WasmEdge's plugin directory.
+
+```bash
+cp ../../../target/release/libhello_plugin.so /usr/local/lib/wasmedge/
+... or ...
+cp ../../../target/release/libhello_plugin.so ~/.wasmedge/plugin
+```
+
+The plugin provides a native host function 'hello'()` that prints a line of text to the system console.
+
+### Wasm program
+
+The Wasm program source code is [here](examples/wasm/hello_world/). It compiles into a Wasm program that calls the native host function `hello()` in the plugin. Build it with
+
+```bash
+cd examples/wasm/hello_world
+cargo build --release
+```
+
+Run it with the following command. It calls the `hello()` host function in the plugin to print the text.
+
+```bash
+wasmedge ../../../target/wasm32-wasi/release/hello_world.wasm
+```
+
+
 ## Example 2: Stateful plugin -- Wasm calls plugin
 
 This demo shows how to manage application state in the plugin, and have the state available to the Wasm programs through host functions.
@@ -19,7 +54,7 @@ cd examples/plugin/stateful_plugin
 cargo build --release
 ```
 
-The build result is a `libstateful_plugin.so` file that you can copy into WasmEdge's `lib` directory to install as a plugin.
+The build result is a `libstateful_plugin.so` file that you can copy into WasmEdge's plugin directory.
 
 ```bash
 cp ../../../target/release/libstateful_plugin.so /usr/local/lib/wasmedge/

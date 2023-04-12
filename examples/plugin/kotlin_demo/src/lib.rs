@@ -122,7 +122,10 @@ pub fn create_module() -> SyncModule<()> {
     module
         .add_func(
             "kotlin.wasm.internal.jsExportStringToWasm",
-            (vec![ValType::I32, ValType::I32, ValType::I32], vec![]),
+            (
+                vec![ValType::ExternRef, ValType::I32, ValType::I32, ValType::I32],
+                vec![],
+            ),
             f6,
         )
         .unwrap();
@@ -449,7 +452,7 @@ pub fn create_module() -> SyncModule<()> {
         unreachable!()
     }
     module
-        .add_func("kotlin.js.jsThrow", (vec![ValType::StructRef], vec![]), f26)
+        .add_func("kotlin.js.jsThrow", (vec![ValType::ExternRef], vec![]), f26)
         .unwrap();
 
     fn f27<'a>(
@@ -851,7 +854,7 @@ pub fn create_module() -> SyncModule<()> {
     }
     module
         .add_func(
-            "kotlin.test.xit",
+            "kotlin.test.__convertKotlinClosureToJsClosure_4c2j8nykft0d",
             (vec![ValType::StructRef], vec![ValType::ExternRef]),
             f50,
         )

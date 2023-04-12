@@ -12,10 +12,11 @@ repository = "https://github.com/second-state/wasmedge_plugin_rust_sdk"
 
 [dependencies]
 thiserror = "1"
-wasmedge_sys_ffi = "0.11.2"
+wasmedge_sys_ffi = { path = "../wasmedge_sys_ffi" }
 
 [features]
-default = ["plugin"]
+default = ["plugin", "wasm_ref"]
 wasi = []
 embedded = ["wasi"]
 plugin = []
+wasm_ref = []

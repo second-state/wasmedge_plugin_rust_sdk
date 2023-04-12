@@ -7,3 +7,14 @@ impl From<ffi::WasmEdge_String> for Result<String, std::str::Utf8Error> {
         Ok(cstr.to_str()?.to_string())
     }
 }
+
+impl PartialEq for ffi::WasmEdge_FullValType {
+    fn eq(&self, other: &Self) -> bool {
+        self.TypeCode == other.TypeCode
+            && unsafe { self.Ext.HeapType.HeapTypeCode == other.Ext.HeapType.HeapTypeCode }
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        !self.eq(other)
+    }
+}

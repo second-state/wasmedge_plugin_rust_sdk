@@ -3,6 +3,7 @@ use std::{ffi::CString, fmt::Debug};
 #[cfg(feature = "wasm_ref")]
 use super::instance::function::{FuncRef, InnerFunc};
 
+use ffi::WasmEdge_HeapTypeCode_None;
 use wasmedge_sys_ffi as ffi;
 
 /// Struct of WasmEdge String.
@@ -113,23 +114,49 @@ impl Eq for WasmVal {}
 impl From<ffi::WasmEdge_Value> for WasmVal {
     fn from(raw_val: ffi::WasmEdge_Value) -> Self {
         unsafe {
-            match raw_val.Type {
-                ffi::WasmEdge_ValType_I32 => WasmVal::I32(ffi::WasmEdge_ValueGetI32(raw_val)),
-                ffi::WasmEdge_ValType_I64 => WasmVal::I64(ffi::WasmEdge_ValueGetI64(raw_val)),
-                ffi::WasmEdge_ValType_F32 => WasmVal::F32(ffi::WasmEdge_ValueGetF32(raw_val)),
-                ffi::WasmEdge_ValType_F64 => WasmVal::F64(ffi::WasmEdge_ValueGetF64(raw_val)),
-                ffi::WasmEdge_ValType_V128 => WasmVal::V128(ffi::WasmEdge_ValueGetV128(raw_val)),
-                #[cfg(feature = "wasm_ref")]
-                ffi::WasmEdge_ValType_FuncRef => {
-                    let func_ref = ffi::WasmEdge_ValueGetFuncRef(raw_val);
-                    WasmVal::FuncRef(FuncRef {
-                        inner: InnerFunc(func_ref),
-                    })
+            match raw_val.Type.TypeCode {
+                ffi::WasmEdge_ValTypeCode_I32 => WasmVal::I32(ffi::WasmEdge_ValueGetI32(raw_val)),
+                ffi::WasmEdge_ValTypeCode_I64 => WasmVal::I64(ffi::WasmEdge_ValueGetI64(raw_val)),
+                ffi::WasmEdge_ValTypeCode_F32 => WasmVal::F32(ffi::WasmEdge_ValueGetF32(raw_val)),
+                ffi::WasmEdge_ValTypeCode_F64 => WasmVal::F64(ffi::WasmEdge_ValueGetF64(raw_val)),
+                ffi::WasmEdge_ValTypeCode_V128 => {
+                    WasmVal::V128(ffi::WasmEdge_ValueGetV128(raw_val))
                 }
                 #[cfg(feature = "wasm_ref")]
-                ffi::WasmEdge_ValType_ExternRef => {
-                    let ctx = ffi::WasmEdge_ValueGetExternRef(raw_val);
-                    WasmVal::ExternRef(Extern { ctx })
+                ffi::WasmEdge_RefTypeCode_Ref => match raw_val.Type.Ext.HeapType.HeapTypeCode {
+                    ffi::WasmEdge_HeapTypeCode_Any => todo!(),
+                    ffi::WasmEdge_HeapTypeCode_Func => {
+                        let fun_ref = ffi::WasmEdge_ValueGetFuncRef(raw_val);
+                        WasmVal::FuncRef(FuncRef {
+                            inner: InnerFunc(fun_ref),
+                        })
+                    }
+                    ffi::WasmEdge_HeapTypeCode_Extern => {
+                        let extern_ref = ffi::WasmEdge_ValueGetExternRef(raw_val);
+                        WasmVal::ExternRef(Extern { ctx: extern_ref })
+                    }
+                    _ => todo!(),
+                },
+                #[cfg(feature = "wasm_ref")]
+                ffi::WasmEdge_RefTypeCode_RefNull => {
+                    if ffi::WasmEdge_ValueIsNullRef(raw_val) {
+                        WasmVal::None
+                    } else {
+                        match raw_val.Type.Ext.HeapType.HeapTypeCode {
+                            ffi::WasmEdge_HeapTypeCode_Any => todo!(),
+                            ffi::WasmEdge_HeapTypeCode_Func => {
+                                let fun_ref = ffi::WasmEdge_ValueGetFuncRef(raw_val);
+                                WasmVal::FuncRef(FuncRef {
+                                    inner: InnerFunc(fun_ref),
+                                })
+                            }
+                            ffi::WasmEdge_HeapTypeCode_Extern => {
+                                let extern_ref = ffi::WasmEdge_ValueGetExternRef(raw_val);
+                                WasmVal::ExternRef(Extern { ctx: extern_ref })
+                            }
+                            _ => todo!(),
+                        }
+                    }
                 }
                 _ => WasmVal::None,
             }
@@ -154,7 +181,7 @@ impl Into<ffi::WasmEdge_Value> for WasmVal {
                 }
                 #[cfg(feature = "wasm_ref")]
                 WasmVal::ExternRef(r) => ffi::WasmEdge_ValueGenExternRef(r.ctx),
-                WasmVal::None => ffi::WasmEdge_ValueGenNullRef(ffi::WasmEdge_ValType_None),
+                WasmVal::None => ffi::WasmEdge_ValueGenNullRef(ffi::WasmEdge_RefType_ExternRef),
             }
         }
     }
@@ -177,26 +204,67 @@ impl Into<ffi::WasmEdge_Value> for &WasmVal {
                 }
                 #[cfg(feature = "wasm_ref")]
                 WasmVal::ExternRef(r) => ffi::WasmEdge_ValueGenExternRef(r.ctx),
-                WasmVal::None => ffi::WasmEdge_ValueGenNullRef(ffi::WasmEdge_ValType_None),
+                WasmVal::None => ffi::WasmEdge_ValueGenNullRef(ffi::WasmEdge_RefType_ExternRef),
             }
         }
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
-pub struct ValType(pub(crate) ffi::WasmEdge_NumType);
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum ValType {
+    I32,
+    I64,
+    F32,
+    F64,
+    V128,
+    #[cfg(feature = "wasm_ref")]
+    FuncRef,
+    #[cfg(feature = "wasm_ref")]
+    ExternRef,
+    #[cfg(feature = "wasm_ref")]
+    AnyRef,
+    #[cfg(feature = "wasm_ref")]
+    StructRef,
+}
+
+const fn number_type(number_code: ffi::WasmEdge_ValTypeCode) -> ffi::WasmEdge_FullValType {
+    ffi::WasmEdge_FullValType {
+        TypeCode: number_code,
+        Ext: ffi::WasmEdge_ValTypeExt {
+            HeapType: ffi::WasmEdge_HeapType {
+                HeapTypeCode: WasmEdge_HeapTypeCode_None,
+                DefinedTypeIdx: 0,
+            },
+        },
+    }
+}
+
+const fn heap_ref_type(number_code: ffi::WasmEdge_HeapTypeCode) -> ffi::WasmEdge_FullValType {
+    ffi::WasmEdge_FullValType {
+        TypeCode: ffi::WasmEdge_RefTypeCode_RefNull,
+        Ext: ffi::WasmEdge_ValTypeExt {
+            HeapType: ffi::WasmEdge_HeapType {
+                HeapTypeCode: number_code,
+                DefinedTypeIdx: 0,
+            },
+        },
+    }
+}
 
 impl ValType {
-    pub const I32: ValType = ValType(ffi::WasmEdge_NumType_I32);
-    pub const I64: ValType = ValType(ffi::WasmEdge_NumType_I64);
-    pub const F32: ValType = ValType(ffi::WasmEdge_NumType_F32);
-    pub const F64: ValType = ValType(ffi::WasmEdge_NumType_F64);
-    pub const V128: ValType = ValType(ffi::WasmEdge_NumType_V128);
+    const _I32: ffi::WasmEdge_FullValType = number_type(ffi::WasmEdge_NumType_I32);
+    const _I64: ffi::WasmEdge_FullValType = number_type(ffi::WasmEdge_NumType_I64);
+    const _F32: ffi::WasmEdge_FullValType = number_type(ffi::WasmEdge_NumType_F32);
+    const _F64: ffi::WasmEdge_FullValType = number_type(ffi::WasmEdge_NumType_F64);
+    const _V128: ffi::WasmEdge_FullValType = number_type(ffi::WasmEdge_NumType_V128);
     #[cfg(feature = "wasm_ref")]
-    pub const FUNC_REF: ValType = ValType(ffi::WasmEdge_RefType_FuncRef);
+    const _FUNC_REF: ffi::WasmEdge_FullValType = heap_ref_type(ffi::WasmEdge_HeapTypeCode_Func);
     #[cfg(feature = "wasm_ref")]
-    pub const EXTERN_REF: ValType = ValType(ffi::WasmEdge_RefType_ExternRef);
-    pub const NONE: ValType = ValType(ffi::WasmEdge_ValType_None);
+    const _EXTERN_REF: ffi::WasmEdge_FullValType = heap_ref_type(ffi::WasmEdge_HeapTypeCode_Extern);
+    #[cfg(feature = "wasm_ref")]
+    const _ANY_REF: ffi::WasmEdge_FullValType = heap_ref_type(ffi::WasmEdge_HeapTypeCode_Any);
+    #[cfg(feature = "wasm_ref")]
+    const _STRUCT_REF: ffi::WasmEdge_FullValType = heap_ref_type(ffi::WasmEdge_HeapTypeCode_Struct);
 }
 
 impl Debug for ValType {
@@ -208,47 +276,53 @@ impl Debug for ValType {
             Self::F64 => write!(f, "ValType::F64"),
             Self::V128 => write!(f, "ValType::V128"),
             #[cfg(feature = "wasm_ref")]
-            Self::FUNC_REF => write!(f, "ValType::FuncRef"),
+            Self::FuncRef => write!(f, "ValType::FuncRef"),
             #[cfg(feature = "wasm_ref")]
-            Self::EXTERN_REF => write!(f, "ValType::ExternRef"),
-            Self::NONE => write!(f, "ValType::None"),
-            _ => {
-                write!(f, "ValType::Unknown")
-            }
+            Self::ExternRef => write!(f, "ValType::ExternRef"),
+            #[cfg(feature = "wasm_ref")]
+            Self::AnyRef => write!(f, "ValType::AnyRef"),
+            #[cfg(feature = "wasm_ref")]
+            Self::StructRef => write!(f, "ValType::StructRef"),
         }
     }
 }
 
-impl From<u32> for ValType {
-    fn from(value: u32) -> Self {
-        match value {
-            ffi::WasmEdge_NumType_I32 => ValType::I32,
-            ffi::WasmEdge_NumType_I64 => ValType::I64,
-            ffi::WasmEdge_NumType_F32 => ValType::F32,
-            ffi::WasmEdge_NumType_F64 => ValType::F64,
-            ffi::WasmEdge_NumType_V128 => ValType::V128,
-            #[cfg(feature = "wasm_ref")]
-            ffi::WasmEdge_RefType_FuncRef => ValType::FUNC_REF,
-            #[cfg(feature = "wasm_ref")]
-            ffi::WasmEdge_RefType_ExternRef => ValType::EXTERN_REF,
-            ffi::WasmEdge_ValType_None => ValType::NONE,
-            _ => panic!("[wasmedge-types] Invalid WasmEdge_ValType: {:#X}", value),
+impl From<&ffi::WasmEdge_FullValType> for ValType {
+    fn from(value: &ffi::WasmEdge_FullValType) -> Self {
+        if value == &ValType::_I32 {
+            ValType::I32
+        } else if value == &ValType::_I64 {
+            ValType::I64
+        } else if value == &ValType::_F32 {
+            ValType::F32
+        } else if value == &ValType::_F64 {
+            ValType::F64
+        } else if value == &ValType::_FUNC_REF {
+            ValType::FuncRef
+        } else if value == &ValType::_EXTERN_REF {
+            ValType::ExternRef
+        } else if value == &ValType::_ANY_REF {
+            ValType::AnyRef
+        } else if value == &ValType::_STRUCT_REF {
+            ValType::StructRef
+        } else {
+            panic!("[wasmedge-types] Invalid WasmEdge_ValType: {:#?}", value);
         }
     }
 }
-impl From<ValType> for u32 {
+
+impl From<ValType> for ffi::WasmEdge_FullValType {
     fn from(value: ValType) -> Self {
-        value.0
-    }
-}
-impl From<i32> for ValType {
-    fn from(value: i32) -> Self {
-        let value = value as u32;
-        ValType::from(value)
-    }
-}
-impl From<ValType> for i32 {
-    fn from(value: ValType) -> Self {
-        value.0 as i32
+        match value {
+            ValType::I32 => ValType::_I32,
+            ValType::I64 => ValType::_I64,
+            ValType::F32 => ValType::_F32,
+            ValType::F64 => ValType::_F64,
+            ValType::V128 => ValType::_V128,
+            ValType::FuncRef => ValType::_FUNC_REF,
+            ValType::ExternRef => ValType::_EXTERN_REF,
+            ValType::AnyRef => ValType::_ANY_REF,
+            ValType::StructRef => ValType::_STRUCT_REF,
+        }
     }
 }

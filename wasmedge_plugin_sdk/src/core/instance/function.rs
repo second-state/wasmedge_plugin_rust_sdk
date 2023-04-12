@@ -49,21 +49,21 @@ impl Function {
 }
 
 impl Function {
-    #[allow(dead_code)]
-    pub fn func_type(&self) -> Option<(Vec<ValType>, Vec<ValType>)> {
-        let ty = unsafe { ffi::WasmEdge_FunctionInstanceGetFunctionType(self.inner.0 as *mut _) };
-        if ty.is_null() {
-            None
-        } else {
-            let ty = FuncType {
-                inner: InnerFuncType(ty),
-            };
-            Some((
-                ty.params_type_iter().collect(),
-                ty.returns_type_iter().collect(),
-            ))
-        }
-    }
+    // #[allow(dead_code)]
+    // pub fn func_type(&self) -> Option<(Vec<ValType>, Vec<ValType>)> {
+    //     let ty = unsafe { ffi::WasmEdge_FunctionInstanceGetFunctionType(self.inner.0 as *mut _) };
+    //     if ty.is_null() {
+    //         None
+    //     } else {
+    //         let ty = FuncType {
+    //             inner: InnerFuncType(ty),
+    //         };
+    //         Some((
+    //             ty.params_type_iter().collect(),
+    //             ty.returns_type_iter().collect(),
+    //         ))
+    //     }
+    // }
 
     #[allow(dead_code)]
     pub fn func_param_size(&self) -> Option<usize> {
@@ -119,14 +119,14 @@ impl FuncType {
         let param_tys = args
             .into_iter()
             .map(|x| x.into())
-            .collect::<Vec<ffi::WasmEdge_ValType>>();
+            .collect::<Vec<ffi::WasmEdge_FullValType>>();
         let ret_tys = returns
             .into_iter()
             .map(|x| x.into())
-            .collect::<Vec<ffi::WasmEdge_ValType>>();
+            .collect::<Vec<ffi::WasmEdge_FullValType>>();
 
         let ctx = unsafe {
-            ffi::WasmEdge_FunctionTypeCreate(
+            ffi::WasmEdge_FunctionTypeCreateV2(
                 param_tys.as_ptr() as *const _,
                 param_tys.len() as u32,
                 ret_tys.as_ptr() as *const _,
@@ -146,31 +146,31 @@ impl FuncType {
         unsafe { ffi::WasmEdge_FunctionTypeGetParametersLength(self.inner.0) }
     }
 
-    pub fn params_type_iter(&self) -> impl Iterator<Item = ValType> {
-        let len = self.params_len();
-        let mut types = Vec::with_capacity(len as usize);
-        unsafe {
-            ffi::WasmEdge_FunctionTypeGetParameters(self.inner.0, types.as_mut_ptr(), len);
-            types.set_len(len as usize);
-        }
+    // pub fn params_type_iter(&self) -> impl Iterator<Item = ValType> {
+    //     let len = self.params_len();
+    //     let mut types = Vec::with_capacity(len as usize);
+    //     unsafe {
+    //         ffi::WasmEdge_FunctionTypeGetParameters(self.inner.0, types.as_mut_ptr(), len);
+    //         types.set_len(len as usize);
+    //     }
 
-        types.into_iter().map(Into::into)
-    }
+    //     types.into_iter().map(Into::into)
+    // }
 
     pub fn returns_len(&self) -> u32 {
         unsafe { ffi::WasmEdge_FunctionTypeGetReturnsLength(self.inner.0) }
     }
 
-    pub fn returns_type_iter(&self) -> impl Iterator<Item = ValType> {
-        let len = self.returns_len();
-        let mut types = Vec::with_capacity(len as usize);
-        unsafe {
-            ffi::WasmEdge_FunctionTypeGetReturns(self.inner.0, types.as_mut_ptr(), len);
-            types.set_len(len as usize);
-        }
+    // pub fn returns_type_iter(&self) -> impl Iterator<Item = ValType> {
+    //     let len = self.returns_len();
+    //     let mut types = Vec::with_capacity(len as usize);
+    //     unsafe {
+    //         ffi::WasmEdge_FunctionTypeGetReturns(self.inner.0, types.as_mut_ptr(), len);
+    //         types.set_len(len as usize);
+    //     }
 
-        types.into_iter().map(Into::into)
-    }
+    //     types.into_iter().map(Into::into)
+    // }
 
     pub(crate) fn delete(self) {
         unsafe { ffi::WasmEdge_FunctionTypeDelete(self.inner.0 as *mut _) };
@@ -194,20 +194,20 @@ impl FuncRef {
         }
     }
 
-    pub fn func_type(&self) -> Option<(Vec<ValType>, Vec<ValType>)> {
-        let ty = unsafe { ffi::WasmEdge_FunctionInstanceGetFunctionType(self.inner.0 as *mut _) };
-        if ty.is_null() {
-            None
-        } else {
-            let ty = FuncType {
-                inner: InnerFuncType(ty),
-            };
-            Some((
-                ty.params_type_iter().collect(),
-                ty.returns_type_iter().collect(),
-            ))
-        }
-    }
+    // pub fn func_type(&self) -> Option<(Vec<ValType>, Vec<ValType>)> {
+    //     let ty = unsafe { ffi::WasmEdge_FunctionInstanceGetFunctionType(self.inner.0 as *mut _) };
+    //     if ty.is_null() {
+    //         None
+    //     } else {
+    //         let ty = FuncType {
+    //             inner: InnerFuncType(ty),
+    //         };
+    //         Some((
+    //             ty.params_type_iter().collect(),
+    //             ty.returns_type_iter().collect(),
+    //         ))
+    //     }
+    // }
 
     pub fn func_param_size(&self) -> Option<usize> {
         let ty = unsafe { ffi::WasmEdge_FunctionInstanceGetFunctionType(self.inner.0 as *mut _) };

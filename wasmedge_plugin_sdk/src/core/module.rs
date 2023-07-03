@@ -34,15 +34,13 @@ impl InnerInstance {
         self.0
     }
 }
-impl Drop for InnerInstance {
-    fn drop(&mut self) {
-        if !self.0.is_null() {
-            unsafe {
-                ffi::WasmEdge_ModuleInstanceDelete(self.0);
-            }
-        }
+
+impl Into<*mut ffi::WasmEdge_ModuleInstanceContext> for InnerInstance {
+    fn into(self) -> *mut ffi::WasmEdge_ModuleInstanceContext {
+        self.0
     }
 }
+
 unsafe impl Send for InnerInstance {}
 unsafe impl Sync for InnerInstance {}
 
@@ -91,31 +89,36 @@ pub trait AsInstance {
 #[derive(Debug)]
 pub struct ImportModule<T: Sized + Send> {
     pub inner: InnerInstance,
-    pub name: String,
-    pub data: Box<T>,
+    pub data_ptr: *mut T,
+}
+
+unsafe extern "C" fn host_data_finalizer<T: Sized + Send>(raw: *mut ::std::os::raw::c_void) {
+    let host_data: Box<T> = Box::from_raw(raw as *mut T);
+    drop(host_data);
 }
 
 impl<T: Sized + Send> ImportModule<T> {
     pub fn create<S: AsRef<str>>(name: S, data: T) -> Result<Self, InstanceError> {
         let raw_name = WasmEdgeString::new(name.as_ref())?;
-        let ctx = unsafe { ffi::WasmEdge_ModuleInstanceCreate(raw_name.as_raw()) };
+        let host_data = Box::leak(Box::new(data)) as *mut T;
+        let ctx = unsafe {
+            ffi::WasmEdge_ModuleInstanceCreateWithData(
+                raw_name.as_raw(),
+                host_data as _,
+                Some(host_data_finalizer::<T>),
+            )
+        };
 
         match ctx.is_null() {
-            true => Err(InstanceError::CreateImportModule),
+            true => {
+                unsafe { host_data_finalizer::<T>(host_data as _) };
+                Err(InstanceError::CreateImportModule)
+            }
             false => Ok(Self {
                 inner: InnerInstance(ctx),
-                name: name.as_ref().to_string(),
-                data: Box::new(data),
+                data_ptr: host_data,
             }),
         }
-    }
-
-    pub fn name(&self) -> String {
-        self.name.to_owned()
-    }
-
-    pub fn unpack(self) -> Box<T> {
-        self.data
     }
 }
 
@@ -302,80 +305,5 @@ impl<T: AsInnerInstance> AsInstance for T {
             ffi::WasmEdge_GlobalInstanceSetValue(global_ctx, val.into());
         }
         Ok(())
-    }
-}
-
-#[cfg(feature = "wasi")]
-pub struct DefaultWasiModule(ImportModule<()>);
-#[cfg(feature = "wasi")]
-impl AsRef<ImportModule<()>> for DefaultWasiModule {
-    fn as_ref(&self) -> &ImportModule<()> {
-        &self.0
-    }
-}
-
-#[cfg(feature = "wasi")]
-impl AsMut<ImportModule<()>> for DefaultWasiModule {
-    fn as_mut(&mut self) -> &mut ImportModule<()> {
-        &mut self.0
-    }
-}
-
-#[cfg(feature = "wasi")]
-impl DefaultWasiModule {
-    pub fn create(
-        args: Vec<&str>,
-        envs: Vec<&str>,
-        preopens: Vec<&str>,
-    ) -> Result<Self, InstanceError> {
-        // parse args
-        let cstr_args: Vec<_> = args
-            .iter()
-            .map(|&x| std::ffi::CString::new(x).unwrap())
-            .collect();
-
-        let mut p_args: Vec<_> = cstr_args.iter().map(|x| x.as_ptr()).collect();
-        let p_args_len = p_args.len();
-        p_args.push(std::ptr::null());
-
-        // parse envs
-        let cstr_envs: Vec<_> = envs
-            .iter()
-            .map(|&x| std::ffi::CString::new(x).unwrap())
-            .collect();
-
-        let mut p_envs: Vec<_> = cstr_envs.iter().map(|x| x.as_ptr()).collect();
-        let p_envs_len = p_envs.len();
-        p_envs.push(std::ptr::null());
-
-        // parse preopens
-        let cstr_preopens: Vec<_> = preopens
-            .iter()
-            .map(|&x| std::ffi::CString::new(x).unwrap())
-            .collect();
-
-        let mut p_preopens: Vec<_> = cstr_preopens.iter().map(|x| x.as_ptr()).collect();
-        let p_preopens_len = p_preopens.len();
-        p_preopens.push(std::ptr::null());
-
-        let ctx = unsafe {
-            ffi::WasmEdge_ModuleInstanceCreateWASI(
-                p_args.as_ptr(),
-                p_args_len as u32,
-                p_envs.as_ptr(),
-                p_envs_len as u32,
-                p_preopens.as_ptr(),
-                p_preopens_len as u32,
-            )
-        };
-        if ctx.is_null() {
-            Err(InstanceError::CreateImportModule)
-        } else {
-            Ok(Self(ImportModule {
-                inner: InnerInstance(ctx),
-                name: "wasi_snapshot_preview1".to_string(),
-                data: Box::new(()),
-            }))
-        }
     }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "wasmedge_sys_ffi"
-version = "0.11.2"
+version = "0.13.0"
 edition = "2021"
 description = """
 An FFI crate for creating WasmEdge plugins.

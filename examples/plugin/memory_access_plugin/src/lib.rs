@@ -1,10 +1,9 @@
-use std::{ffi::CString, io::Write};
+use std::io::Write;
 
 use wasmedge_plugin_sdk::{
     error::CoreError,
     memory::Memory,
-    module::{SyncInstanceRef, SyncModule},
-    plugin::{PluginBuilder, PluginDescriptorRef},
+    module::{PluginModule, SyncInstanceRef},
     types::{ValType, WasmVal},
 };
 
@@ -15,7 +14,7 @@ pub enum PluginError {
     UTF8Error,
 }
 
-pub fn create_module() -> SyncModule<()> {
+pub fn create_module() -> PluginModule<()> {
     fn to_uppercase<'a>(
         _inst_ref: &'a mut SyncInstanceRef,
         main_memory: &'a mut Memory,
@@ -69,7 +68,7 @@ pub fn create_module() -> SyncModule<()> {
         }
     }
 
-    let mut module = SyncModule::create("memory_access_module", ()).unwrap();
+    let mut module = PluginModule::create("memory_access_module", ()).unwrap();
 
     module
         .add_func(
@@ -86,18 +85,11 @@ pub fn create_module() -> SyncModule<()> {
     module
 }
 
-#[export_name = "WasmEdge_Plugin_GetDescriptor"]
-pub extern "C" fn plugin_hook() -> PluginDescriptorRef {
-    println!("memory_access_plugin loading");
-    let mut builder = PluginBuilder::create(
-        CString::new("memory_access_plugin").unwrap(),
-        CString::new("a demo plugin").unwrap(),
-    );
-    builder.add_module(
-        CString::new("memory_access_module").unwrap(),
-        CString::new("a demo of module").unwrap(),
-        create_module,
-    );
-
-    builder.build()
-}
+wasmedge_plugin_sdk::plugin::register_plugin!(
+    plugin_name="memory_access_plugin",
+    plugin_description="a demo plugin",
+    version=(0,0,0,0),
+    modules=[
+        {"memory_access_module","a demo of module",create_module}
+    ]
+);

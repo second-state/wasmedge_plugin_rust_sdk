@@ -1,14 +1,11 @@
-use std::ffi::CString;
-
 use wasmedge_plugin_sdk::{
     error::CoreError,
     memory::Memory,
-    module::{SyncInstanceRef, SyncModule},
-    plugin::{PluginBuilder, PluginDescriptorRef},
+    module::{PluginModule, SyncInstanceRef},
     types::{ValType, WasmVal},
 };
 
-pub fn create_module() -> SyncModule<(i32, i32)> {
+pub fn create_module() -> PluginModule<(i32, i32)> {
     fn add_x<'a>(
         _inst_ref: &'a mut SyncInstanceRef,
         _main_memory: &'a mut Memory,
@@ -41,7 +38,7 @@ pub fn create_module() -> SyncModule<(i32, i32)> {
         Ok(vec![WasmVal::I32(data.1)])
     }
 
-    let mut module = SyncModule::create("stateful_module", (0, 0)).unwrap();
+    let mut module = PluginModule::create("stateful_module", (0, 0)).unwrap();
 
     module
         .add_func("add_x", (vec![ValType::I32], vec![ValType::I32]), add_x)
@@ -52,17 +49,11 @@ pub fn create_module() -> SyncModule<(i32, i32)> {
     module
 }
 
-#[export_name = "WasmEdge_Plugin_GetDescriptor"]
-pub extern "C" fn plugin_hook() -> PluginDescriptorRef {
-    let mut builder = PluginBuilder::create(
-        CString::new("stateful_plugin").unwrap(),
-        CString::new("a demo of plugin").unwrap(),
-    );
-    builder.add_module(
-        CString::new("stateful_module").unwrap(),
-        CString::new("a demo of module").unwrap(),
-        create_module,
-    );
-
-    builder.build()
-}
+wasmedge_plugin_sdk::plugin::register_plugin!(
+    plugin_name="stateful_plugin",
+    plugin_description="a demo plugin",
+    version=(0,0,0,0),
+    modules=[
+        {"stateful_module","a demo of module",create_module}
+    ]
+);

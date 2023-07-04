@@ -11,10 +11,10 @@ repository = "https://github.com/second-state/wasmedge_plugin_rust_sdk"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-logger = "0.4"
 thiserror = "1"
 wasmedge_sys_ffi = { version = "0.13.0", path = "../wasmedge_sys_ffi" }
 paste = "1.0"
+log = "0.4"
 
 [features]
 default = ["plugin"]

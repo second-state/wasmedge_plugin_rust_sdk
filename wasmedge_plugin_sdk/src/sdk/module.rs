@@ -3,10 +3,6 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-#[cfg(feature = "embedded")]
-use crate::ast_module::AstModule;
-#[cfg(feature = "embedded")]
-pub use crate::core::module::DefaultWasiModule;
 use crate::{
     core::{
         executor::{Executor, InnerExecutor},
@@ -16,7 +12,6 @@ use crate::{
         types::{ValType, WasmEdgeString, WasmVal},
     },
     error::{CoreError, InstanceError},
-    store::Store,
 };
 use thiserror::Error;
 use wasmedge_sys_ffi as ffi;
@@ -53,7 +48,6 @@ pub(crate) unsafe extern "C" fn wrapper_sync_fn<T: Sized + Send>(
     let cous = || -> Result<(), CoreError> {
         let inst_ctx = ffi::WasmEdge_CallingFrameGetModuleInstance(calling_frame_ctx);
         let executor_ctx = ffi::WasmEdge_CallingFrameGetExecutor(calling_frame_ctx);
-
         let main_mem_ctx = ffi::WasmEdge_CallingFrameGetMemoryInstance(calling_frame_ctx, 0);
 
         let mut inst = std::mem::ManuallyDrop::new(SyncInstanceRef {
@@ -127,54 +121,46 @@ impl SyncInstanceRef {
     }
 }
 
-pub struct SyncInstance<'import> {
+pub struct SyncInstance {
     inst_ref: SyncInstanceRef,
-    _store: &'import Store<'import>,
 }
 
-impl<'import> AsInnerInstance for SyncInstance<'import> {
+impl AsInnerInstance for SyncInstance {
     unsafe fn get_mut_ptr(&self) -> *mut ffi::WasmEdge_ModuleInstanceContext {
         self.inst_ref.get_mut_ptr()
     }
 }
 
-impl<'import> SyncInstance<'import> {
-    #[cfg(feature = "embedded")]
-    pub fn instance(
-        executor: Executor,
-        store: &'import mut Store<'import>,
-        module: &AstModule,
-    ) -> Result<SyncInstance<'import>, CoreError> {
-        let inst = executor.instantiate(&store.inner_store, module)?;
-        Ok(SyncInstance {
-            _store: store,
-            inst_ref: SyncInstanceRef { inst, executor },
-        })
-    }
-
+impl SyncInstance {
     pub fn call<'r>(&mut self, name: &str, args: Vec<WasmVal>) -> Result<Vec<WasmVal>, CoreError> {
         self.inst_ref.call(name, args)
     }
 }
 
-pub struct SyncModule<T: Send + Sized> {
-    inner: ImportModule<T>,
+pub struct PluginModule<T: Send + Sized> {
+    pub(crate) inner: ImportModule<T>,
 }
 
-impl<T: Send + Sized> Deref for SyncModule<T> {
+impl<T: Send + Sized> Into<*mut ffi::WasmEdge_ModuleInstanceContext> for PluginModule<T> {
+    fn into(self) -> *mut ffi::WasmEdge_ModuleInstanceContext {
+        self.inner.inner.into()
+    }
+}
+
+impl<T: Send + Sized> Deref for PluginModule<T> {
     type Target = ImportModule<T>;
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
 
-impl<T: Send + Sized> DerefMut for SyncModule<T> {
+impl<T: Send + Sized> DerefMut for PluginModule<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
 }
 
-impl<T: Send + Sized> SyncModule<T> {
+impl<T: Send + Sized> PluginModule<T> {
     pub fn create<S: AsRef<str>>(name: S, data: T) -> Result<Self, InstanceError> {
         let inner = ImportModule::create(name, data)?;
         Ok(Self { inner })
@@ -207,8 +193,13 @@ impl<T: Send + Sized> SyncModule<T> {
         real_fn: SyncWasmFn<T>,
     ) -> Result<(), AddFuncError> {
         unsafe {
-            let data_ptr = self.inner.data.as_mut() as *mut T;
-            self.add_custom_func(name, ty, wrapper_sync_fn::<T>, real_fn as *mut _, data_ptr)
+            self.add_custom_func(
+                name,
+                ty,
+                wrapper_sync_fn::<T>,
+                real_fn as *mut _,
+                self.inner.data_ptr,
+            )
         }
     }
 }

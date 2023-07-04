@@ -8,7 +8,7 @@ macro_rules! env_path {
 
 fn main() {
     let  lib_dir = env_path!("WASMEDGE_LIB_DIR").expect(
-        "[wasmedge-sys-ffi] Failed to locate the required header and/or library file. Please reference the link: https://wasmedge.org/book/en/embed/rust.html",
+        "[wasmedge-sys-ffi] Failed to locate the required header and/or library file. Please specify via the environment variable `WASMEDGE_LIB_DIR`.",
     );
 
     println!("cargo:rustc-env=LD_LIBRARY_PATH={}", lib_dir.display());

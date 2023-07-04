@@ -1,42 +1,36 @@
-use std::ffi::CString;
-
 use wasmedge_plugin_sdk::{
     error::CoreError,
     memory::Memory,
-    module::{SyncInstanceRef, SyncModule},
-    plugin::{PluginBuilder, PluginDescriptorRef},
+    module::{PluginModule, SyncInstanceRef},
     types::WasmVal,
 };
 
-pub fn create_module() -> SyncModule<()> {
+pub struct HostData(String);
+
+pub fn create_module() -> PluginModule<HostData> {
     fn hello<'a>(
         _inst_ref: &'a mut SyncInstanceRef,
         _main_memory: &'a mut Memory,
-        _data: &'a mut (),
+        data: &'a mut HostData,
         _args: Vec<WasmVal>,
     ) -> Result<Vec<WasmVal>, CoreError> {
-        println!("[plugin] hello wasmedge plugin");
+        println!("[plugin] hello wasmedge plugin. {}", data.0);
         Ok(vec![])
     }
 
-    let mut module = SyncModule::create("hello_module", ()).unwrap();
+    let mut module =
+        PluginModule::create("hello_module", HostData("hello, Host Data".into())).unwrap();
 
     module.add_func("hello", (vec![], vec![]), hello).unwrap();
 
     module
 }
 
-#[export_name = "WasmEdge_Plugin_GetDescriptor"]
-pub extern "C" fn plugin_hook() -> PluginDescriptorRef {
-    let mut builder = PluginBuilder::create(
-        CString::new("hello_plugin").unwrap(),
-        CString::new("a demo plugin").unwrap(),
-    );
-    builder.add_module(
-        CString::new("hello_module").unwrap(),
-        CString::new("a demo of module").unwrap(),
-        create_module,
-    );
-
-    builder.build()
-}
+wasmedge_plugin_sdk::plugin::register_plugin!(
+    plugin_name="hello_plugin",
+    plugin_description="a demo plugin",
+    version=(0,0,0,0),
+    modules=[
+        {"hello_module","a demo of module",create_module}
+    ]
+);

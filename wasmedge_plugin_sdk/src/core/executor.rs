@@ -1,12 +1,7 @@
 //! Defines WasmEdge Executor.
 
-#[cfg(feature = "embedded")]
-use super::ast_module::AstModule;
-#[cfg(feature = "embedded")]
-use super::config::Config;
 use super::instance::function::FuncRef;
-#[cfg(feature = "embedded")]
-use super::module::InnerInstance;
+
 use super::types::WasmVal;
 
 use crate::error::{CoreError, CoreExecutionError};
@@ -20,48 +15,6 @@ pub struct Executor {
     pub(crate) inner: InnerExecutor,
 }
 impl Executor {
-    #[cfg(feature = "embedded")]
-    pub fn create(config: &Option<Config>) -> Option<Self> {
-        unsafe {
-            let conf_ctx = match config {
-                Some(cfg) => cfg.inner.0,
-                None => std::ptr::null_mut(),
-            };
-            let ctx = ffi::WasmEdge_ExecutorCreate(conf_ctx, std::ptr::null_mut());
-            if ctx.is_null() {
-                None
-            } else {
-                Some(Executor {
-                    inner: InnerExecutor(ctx),
-                })
-            }
-        }
-    }
-
-    #[cfg(feature = "embedded")]
-    pub fn instantiate(
-        &self,
-        store: &InnerStore,
-        module: &AstModule,
-    ) -> Result<InnerInstance, CoreError> {
-        let mut instance_ctx = std::ptr::null_mut();
-        unsafe {
-            check(ffi::WasmEdge_ExecutorInstantiate(
-                self.inner.0,
-                &mut instance_ctx,
-                store.0,
-                module.inner,
-            ))?;
-        }
-
-        debug_assert!(!instance_ctx.is_null());
-        if instance_ctx.is_null() {
-            return Err(CoreError::runtime());
-        }
-
-        Ok(unsafe { InnerInstance::from_raw(instance_ctx) })
-    }
-
     pub fn run_func_ref(
         &self,
         func: &FuncRef,

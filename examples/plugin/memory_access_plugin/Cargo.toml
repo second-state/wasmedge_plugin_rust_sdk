@@ -8,4 +8,4 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-wasmedge_plugin_sdk = "0.1"
+wasmedge_plugin_sdk = { version = "0.2", path = "../../../wasmedge_plugin_sdk" }

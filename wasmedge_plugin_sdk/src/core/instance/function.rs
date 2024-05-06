@@ -239,6 +239,6 @@ impl FuncRef {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct InnerFuncRef(pub(crate) *const ffi::WasmEdge_FunctionInstanceContext);
+pub(crate) struct InnerFuncRef(());
 unsafe impl Send for InnerFuncRef {}
 unsafe impl Sync for InnerFuncRef {}

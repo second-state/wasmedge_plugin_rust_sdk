@@ -174,6 +174,13 @@ impl OptionString {
         Ok(c_string.into_string()?)
     }
 }
+impl Drop for OptionString {
+    fn drop(&mut self) {
+        unsafe {
+            Box::from_raw(self.buf as *mut i8);
+        }
+    }
+}
 pub trait Placeholder {
     fn create_placeholder() -> Box<Self>;
 }
@@ -189,7 +196,7 @@ impl Placeholder for OptionString {
     fn create_placeholder() -> Box<Self> {
         let length: u32 = 128;
         let buf = vec![0i8; length as usize].into_boxed_slice();
-        let buf_ptr = Box::into_raw(buf) as *mut i8;
+        let buf_ptr = Box::into_raw(buf) as *const u8;
         Box::new(OptionString {
             length,
             buf: buf_ptr,

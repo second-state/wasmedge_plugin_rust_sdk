@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    "wasmedge_sys_ffi",
     "wasmedge_plugin_sdk",
     "examples/wasm/*",
     "examples/plugin/*",

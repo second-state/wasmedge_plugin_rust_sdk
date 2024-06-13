@@ -2,7 +2,7 @@ use std::ops::{Add, Sub};
 
 use crate::error::CoreError;
 use crate::utils::check;
-use wasmedge_sys_ffi as ffi;
+use wasmedge_sys::ffi;
 
 /// Defines a WebAssembly memory instance, which is a linear memory described by its [type](crate::MemType). Each memory instance consists of a vector of bytes and an optional maximum size, and its size is a multiple of the WebAssembly page size (*64KiB* of each page).
 #[derive(Debug)]

@@ -3,7 +3,7 @@ pub use paste::paste;
 use std::any::TypeId;
 use std::ffi::CString;
 use std::slice;
-pub use wasmedge_sys_ffi as ffi;
+pub use wasmedge_sys::ffi;
 
 #[macro_export]
 macro_rules! register_plugin {
@@ -177,7 +177,7 @@ impl OptionString {
 impl Drop for OptionString {
     fn drop(&mut self) {
         unsafe {
-            Box::from_raw(self.buf as *mut i8);
+            let _ = Box::from_raw(self.buf as *mut i8);
         }
     }
 }
@@ -196,7 +196,7 @@ impl Placeholder for OptionString {
     fn create_placeholder() -> Box<Self> {
         let length: u32 = 128;
         let buf = vec![0i8; length as usize].into_boxed_slice();
-        let buf_ptr = Box::into_raw(buf) as *const u8;
+        let buf_ptr = Box::into_raw(buf) as *const _;
         Box::new(OptionString {
             length,
             buf: buf_ptr,

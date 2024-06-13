@@ -14,7 +14,7 @@ use crate::{
     error::{CoreError, InstanceError},
 };
 use thiserror::Error;
-use wasmedge_sys_ffi as ffi;
+use wasmedge_sys::ffi;
 
 #[derive(Error, Clone, Debug, PartialEq, Eq)]
 pub enum CallError {

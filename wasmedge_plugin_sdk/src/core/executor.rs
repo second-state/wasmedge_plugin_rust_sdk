@@ -7,7 +7,7 @@ use super::types::WasmVal;
 use crate::error::{CoreError, CoreExecutionError};
 use crate::utils::check;
 
-use wasmedge_sys_ffi as ffi;
+use wasmedge_sys::ffi;
 
 /// Defines an execution environment for both pure WASM and compiled WASM.
 #[derive(Debug)]

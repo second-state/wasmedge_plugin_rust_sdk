@@ -1,6 +1,6 @@
 //! Defines WasmEdge Instance and other relevant types.
 
-use wasmedge_sys_ffi as ffi;
+use wasmedge_sys::ffi;
 
 use crate::{core::types::WasmVal, error::InstanceError};
 
@@ -171,7 +171,7 @@ impl<T: AsInnerInstance> AsInstance for T {
             for mem_name in mem_names {
                 let ptr = ffi::WasmEdge_ModuleInstanceFindMemory(self.get_mut_ptr(), mem_name);
                 if !ptr.is_null() {
-                    let mem_name: Result<String, std::str::Utf8Error> = mem_name.into();
+                    let mem_name: Result<String, std::str::Utf8Error> = mem_name.try_as_string();
                     if let Ok(name) = mem_name {
                         memories.push((name, Memory::from_raw(ptr)));
                     }
@@ -204,7 +204,7 @@ impl<T: AsInnerInstance> AsInstance for T {
             let names = func_names
                 .into_iter()
                 .map(|x| {
-                    let r: Result<String, std::str::Utf8Error> = x.into();
+                    let r: Result<String, std::str::Utf8Error> = x.try_as_string();
                     r.unwrap_or_default()
                 })
                 .collect::<Vec<String>>();
@@ -237,7 +237,7 @@ impl<T: AsInnerInstance> AsInstance for T {
                 let names = mem_names
                     .into_iter()
                     .map(|x| {
-                        let r: Result<String, std::str::Utf8Error> = x.into();
+                        let r: Result<String, std::str::Utf8Error> = x.try_as_string();
                         r.unwrap_or_default()
                     })
                     .collect::<Vec<String>>();
@@ -267,12 +267,12 @@ impl<T: AsInnerInstance> AsInstance for T {
                 if ffi::WasmEdge_Mutability_Const
                     == ffi::WasmEdge_GlobalTypeGetMutability(global_type)
                 {
-                    let name: Result<String, std::str::Utf8Error> = name.into();
+                    let name: Result<String, std::str::Utf8Error> = name.try_as_string();
                     if let Ok(name) = name {
                         globals.push(Global::Const(ConstGlobal { name, val }));
                     }
                 } else {
-                    let name: Result<String, std::str::Utf8Error> = name.into();
+                    let name: Result<String, std::str::Utf8Error> = name.try_as_string();
                     if let Ok(name) = name {
                         globals.push(Global::Mut(MutGlobal { name, val }));
                     }
@@ -305,5 +305,16 @@ impl<T: AsInnerInstance> AsInstance for T {
             ffi::WasmEdge_GlobalInstanceSetValue(global_ctx, val.into());
         }
         Ok(())
+    }
+}
+
+trait TryAsString {
+    fn try_as_string(&self) -> Result<String, std::str::Utf8Error>;
+}
+
+impl TryAsString for ffi::WasmEdge_String {
+    fn try_as_string(&self) -> Result<String, std::str::Utf8Error> {
+        let cstr = unsafe { std::ffi::CStr::from_ptr(self.Buf as *const _) };
+        Ok(cstr.to_str()?.to_string())
     }
 }

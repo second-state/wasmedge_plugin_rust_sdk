@@ -3,7 +3,7 @@ use std::os::raw::c_void;
 use crate::core::executor::Executor;
 use crate::core::types::{ValType, WasmVal};
 use crate::error::CoreError;
-use wasmedge_sys_ffi as ffi;
+use wasmedge_sys::ffi;
 
 pub type FnWrapper = unsafe extern "C" fn(
     key_ptr: *mut c_void,

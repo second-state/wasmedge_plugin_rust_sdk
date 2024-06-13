@@ -1,6 +1,6 @@
 //! Defines WasmEdge Config struct.
 
-use wasmedge_sys_ffi as ffi;
+use wasmedge_sys::ffi;
 
 #[derive(Debug)]
 pub struct Config {

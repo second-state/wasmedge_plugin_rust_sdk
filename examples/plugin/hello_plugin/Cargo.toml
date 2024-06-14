@@ -9,3 +9,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 wasmedge_plugin_sdk = { version = "0.2", path = "../../../" }
+
+[features]
+standalone = ["wasmedge_plugin_sdk/standalone"]

@@ -3,7 +3,7 @@ pub use paste::paste;
 use std::any::TypeId;
 use std::ffi::CString;
 use std::slice;
-pub use wasmedge_sys_ffi as ffi;
+pub use wasmedge_sys::ffi;
 
 #[macro_export]
 macro_rules! register_plugin {

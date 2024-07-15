@@ -3,7 +3,7 @@ use crate::error::{
     CoreValidationError,
 };
 
-use wasmedge_sys_ffi::{self as ffi, WasmEdge_Result, WasmEdge_ResultGetCode, WasmEdge_ResultOK};
+use wasmedge_sys::ffi::{self, WasmEdge_Result, WasmEdge_ResultGetCode, WasmEdge_ResultOK};
 
 // Checks the result of a `FFI` function.
 pub(crate) fn check(result: WasmEdge_Result) -> Result<(), CoreError> {

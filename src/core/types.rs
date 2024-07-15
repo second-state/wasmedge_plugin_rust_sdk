@@ -3,7 +3,7 @@ use std::{ffi::CString, fmt::Debug};
 #[cfg(feature = "wasm_ref")]
 use super::instance::function::{FuncRef, InnerFunc};
 
-use wasmedge_sys_ffi as ffi;
+use wasmedge_sys::ffi;
 
 /// Struct of WasmEdge String.
 #[derive(Debug)]

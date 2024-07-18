@@ -89,21 +89,24 @@ impl Eq for WasmVal {}
 impl From<ffi::WasmEdge_Value> for WasmVal {
     fn from(raw_val: ffi::WasmEdge_Value) -> Self {
         unsafe {
-            match raw_val.Type {
-                ffi::WasmEdge_ValType_I32 => WasmVal::I32(ffi::WasmEdge_ValueGetI32(raw_val)),
-                ffi::WasmEdge_ValType_I64 => WasmVal::I64(ffi::WasmEdge_ValueGetI64(raw_val)),
-                ffi::WasmEdge_ValType_F32 => WasmVal::F32(ffi::WasmEdge_ValueGetF32(raw_val)),
-                ffi::WasmEdge_ValType_F64 => WasmVal::F64(ffi::WasmEdge_ValueGetF64(raw_val)),
-                ffi::WasmEdge_ValType_V128 => WasmVal::V128(ffi::WasmEdge_ValueGetV128(raw_val)),
-                _ => {
-                    #[cfg(debug_assertions)]
-                    panic!("Received an unexpected type {}.", raw_val.Type);
+            if ffi::WasmEdge_ValTypeIsI32(raw_val.Type) {
+                return WasmVal::I32(ffi::WasmEdge_ValueGetI32(raw_val));
+            } else if ffi::WasmEdge_ValTypeIsI64(raw_val.Type) {
+                return WasmVal::I64(ffi::WasmEdge_ValueGetI64(raw_val));
+            } else if ffi::WasmEdge_ValTypeIsF32(raw_val.Type) {
+                return WasmVal::F32(ffi::WasmEdge_ValueGetF32(raw_val));
+            } else if ffi::WasmEdge_ValTypeIsF64(raw_val.Type) {
+                return WasmVal::F64(ffi::WasmEdge_ValueGetF64(raw_val));
+            } else if ffi::WasmEdge_ValTypeIsV128(raw_val.Type) {
+                return WasmVal::V128(ffi::WasmEdge_ValueGetV128(raw_val));
+            } else {
+                #[cfg(debug_assertions)]
+                panic!("Received an unexpected type {:?}.", raw_val.Type);
 
-                    #[cfg(not(debug_assertions))]
-                    {
-                        log::error!("Received an unexpected type {}.", raw_val.Type);
-                        WasmVal::UnknownType(raw_val)
-                    }
+                #[cfg(not(debug_assertions))]
+                {
+                    log::error!("Received an unexpected type {:?}.", raw_val.Type);
+                    WasmVal::UnknownType(raw_val)
                 }
             }
         }
@@ -140,63 +143,83 @@ impl Into<ffi::WasmEdge_Value> for &WasmVal {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
-pub struct ValType(pub(crate) ffi::WasmEdge_ValType);
-
-impl ValType {
-    pub const I32: ValType = ValType(ffi::WasmEdge_ValType_I32);
-    pub const I64: ValType = ValType(ffi::WasmEdge_ValType_I64);
-    pub const F32: ValType = ValType(ffi::WasmEdge_ValType_F32);
-    pub const F64: ValType = ValType(ffi::WasmEdge_ValType_F64);
-    pub const V128: ValType = ValType(ffi::WasmEdge_ValType_V128);
-    pub const FUNC_REF: ValType = ValType(ffi::WasmEdge_ValType_FuncRef);
-    pub const EXTERN_REF: ValType = ValType(ffi::WasmEdge_ValType_ExternRef);
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum ValType {
+    /// 32-bit integer.
+    ///
+    /// Integers are not inherently signed or unsigned, their interpretation is determined by individual operations.
+    I32,
+    /// 64-bit integer.
+    ///
+    /// Integers are not inherently signed or unsigned, their interpretation is determined by individual operations.
+    I64,
+    /// 32-bit floating-point data as defined by the [IEEE 754-2019](https://ieeexplore.ieee.org/document/8766229).
+    F32,
+    /// 64-bit floating-point data as defined by the [IEEE 754-2019](https://ieeexplore.ieee.org/document/8766229).
+    F64,
+    /// 128-bit vector of packed integer or floating-point data.
+    ///
+    /// The packed data can be interpreted as signed or unsigned integers, single or double precision floating-point
+    /// values, or a single 128 bit type. The interpretation is determined by individual operations.
+    V128,
+    /// A reference to a host function.
+    FuncRef,
+    /// A reference to object.
+    ExternRef,
+    /// A reference that unsupported by c-api.
+    UnsupportedRef,
 }
 
-impl Debug for ValType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match *self {
-            Self::I32 => write!(f, "ValType::I32"),
-            Self::I64 => write!(f, "ValType::I64"),
-            Self::F32 => write!(f, "ValType::F32"),
-            Self::F64 => write!(f, "ValType::F64"),
-            Self::V128 => write!(f, "ValType::V128"),
-            Self::FUNC_REF => write!(f, "ValType::FuncRef"),
-            Self::EXTERN_REF => write!(f, "ValType::ExternRef"),
-            _ => {
-                write!(f, "ValType::Unknown")
+impl From<ffi::WasmEdge_ValType> for ValType {
+    fn from(value: ffi::WasmEdge_ValType) -> Self {
+        unsafe {
+            if ffi::WasmEdge_ValTypeIsI32(value) {
+                ValType::I32
+            } else if ffi::WasmEdge_ValTypeIsI64(value) {
+                ValType::I64
+            } else if ffi::WasmEdge_ValTypeIsF32(value) {
+                ValType::F32
+            } else if ffi::WasmEdge_ValTypeIsF64(value) {
+                ValType::F64
+            } else if ffi::WasmEdge_ValTypeIsV128(value) {
+                ValType::V128
+            } else if ffi::WasmEdge_ValTypeIsRef(value) {
+                if ffi::WasmEdge_ValTypeIsFuncRef(value) {
+                    ValType::FuncRef
+                } else if ffi::WasmEdge_ValTypeIsExternRef(value) {
+                    ValType::ExternRef
+                } else {
+                    log::warn!(
+                        "capi unsupport WasmEdge_RefType `{:x}`",
+                        u64::from_be_bytes(value.Data)
+                    );
+                    ValType::UnsupportedRef
+                }
+            } else {
+                log::warn!(
+                    "unknown WasmEdge_ValType `{:x}`",
+                    u64::from_be_bytes(value.Data)
+                );
+                ValType::UnsupportedRef
             }
         }
     }
 }
 
-impl From<u32> for ValType {
-    fn from(value: u32) -> Self {
-        match value {
-            ffi::WasmEdge_ValType_I32 => ValType::I32,
-            ffi::WasmEdge_ValType_I64 => ValType::I64,
-            ffi::WasmEdge_ValType_F32 => ValType::F32,
-            ffi::WasmEdge_ValType_F64 => ValType::F64,
-            ffi::WasmEdge_ValType_V128 => ValType::V128,
-            ffi::WasmEdge_ValType_FuncRef => ValType::FUNC_REF,
-            ffi::WasmEdge_ValType_ExternRef => ValType::EXTERN_REF,
-            _ => panic!("[wasmedge-types] Invalid WasmEdge_ValType: {:#X}", value),
+impl From<ValType> for ffi::WasmEdge_ValType {
+    fn from(value: ValType) -> Self {
+        unsafe {
+            match value {
+                ValType::I32 => ffi::WasmEdge_ValTypeGenI32(),
+                ValType::I64 => ffi::WasmEdge_ValTypeGenI64(),
+                ValType::F32 => ffi::WasmEdge_ValTypeGenF32(),
+                ValType::F64 => ffi::WasmEdge_ValTypeGenF64(),
+                ValType::V128 => ffi::WasmEdge_ValTypeGenV128(),
+                ValType::FuncRef => ffi::WasmEdge_ValTypeGenFuncRef(),
+                ValType::ExternRef => ffi::WasmEdge_ValTypeGenExternRef(),
+                // C API is temporarily unsupported.
+                ValType::UnsupportedRef => ffi::WasmEdge_ValTypeGenExternRef(),
+            }
         }
-    }
-}
-impl From<ValType> for u32 {
-    fn from(value: ValType) -> Self {
-        value.0
-    }
-}
-impl From<i32> for ValType {
-    fn from(value: i32) -> Self {
-        let value = value as u32;
-        ValType::from(value)
-    }
-}
-impl From<ValType> for i32 {
-    fn from(value: ValType) -> Self {
-        value.0 as i32
     }
 }

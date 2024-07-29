@@ -2,6 +2,12 @@
 
 WasmEdge plugins are packaged host functions that allow Wasm programs running inside WasmEdge to access native functions and vice versa. The plugin system makes WasmEdge extensible.
 
+## Install WasmEdge
+
+```bash
+curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install.sh | bash -s -- -v 0.14.0
+```
+
 ## Example 1: Hello world -- Wasm calls plugin
 
 This demo shows how to call a host function registered in the plugin from a Wasm program running inside WasmEdge.
